@@ -19,6 +19,7 @@ public class MockRouteConfig {
     public static final String MOCK_RESPONSE = "MOCK_RESPONSE";
     public static final String MOCK_CONFIG_NAME = "MOCK_CONFIG_NAME";
     public static final String MOCK_RESPONSE_STATUS = "MOCK_RESPONSE_STATUS";
+    public static final String METHOD_CORRECTION_REQUIRED = "METHOD_CORRECTION_REQUIRED";
 
     private final Logger log = LoggerFactory.getLogger(MockRouteConfig.class);
 
@@ -32,7 +33,7 @@ public class MockRouteConfig {
         final URI uri = URI.create(mockConfigProperties.getApiGatewayHost());
         routes
                 .route("defaultApiRoute", p -> {
-                    p.method("GET", "POST");
+                    p.method("GET", "POST", "DELETE", "PUT");
                     p.order(3);
                     return p.uri(uri);
                 });

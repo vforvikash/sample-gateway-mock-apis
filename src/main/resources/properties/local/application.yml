@@ -6,9 +6,20 @@ spring:
       - local
   cloud:
     gateway:
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOrigins: "http://localhost:8081"
+            allowedMethods:
+              - GET
+              - PUT
+              - POST
+              - DELETE
       httpclient:
         connect-timeout: 5000000
         response-timeout: 50000s
+        ssl:
+          useInsecureTrustManager: true
 #      httpserver:
 #        wiretap: true
       actuator:
@@ -16,12 +27,31 @@ spring:
           enabled: true
     config:
       enabled: false
+      import-check: false
       name: ${spring.application.name}
       failFast: false
       profile: config-gateway-profile
       label: local
+#  ssl:
+#    bundle:
+#      jks:
+#        web-server:
+#          key:
+#            alias: "certificate"
+#            password: “vikash”
+#          keystore:
+#            location: "classpath:certificate.p12"
+#            password: "vikash"
+#      pem:
+#        client:
+#          truststore:
+#            certificate: "classpath:client.crt"
 server:
   port: 8089
+#  ssl:
+#    bundle: “web-server”
+#    client-auth: NEED
+
 logging:
   level:
     root: info
@@ -48,6 +78,7 @@ mock:
   response:
     sampleConfigResponseKey: '{ "statusCode": 701, "statusMessage": "another sample response" }'
 
+
 mockgateway:
   name: Mock API
   apiGatewayHost: https://localhost:3000
@@ -73,4 +104,22 @@ mockgateway:
     mockResponseMapper:
       type: param
       mapperKey: personId
+    order: 0
+  apis[2]:
+    mockEnabled: true
+    mockName: getMockTreeApi
+    endpointCheck: /tree/task/entities
+    responseFile: true
+    mockResponse: /mock/tree/get.json
+    mockResponseByMethod:
+      delete:
+        - true
+        - /mock/tree/delete.json
+      put:
+        - true
+        - /mock/tree/put.json
+      post:
+        - true
+        - /mock/tree/post.json
+    mockResponseStatus: 200
     order: 0

@@ -7,12 +7,15 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.StreamUtils;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
+import reactor.util.function.Tuple2;
+import reactor.util.function.Tuples;
 
 import java.time.Duration;
 import java.util.Arrays;
@@ -55,7 +58,36 @@ public class LocalMockController {
     ) {
         log.info("GET params: " + requestParams);
         String mapperValue = getMapperValueIfApplicable(originalEndpoint, mockConfigName, requestParams);
-        return getMonoResponseEntity(originalEndpoint, isResponseFile, mockResponse, mockResponseStatus, mapperValue, mockConfigName);
+        return getMonoResponseEntity(originalEndpoint, mockResponseStatus, mapperValue, mockConfigName, HttpMethod.GET);
+    }
+
+    @PutMapping
+    public ResponseEntity<Mono<String>> mockPutRequest(
+            @RequestParam("originalEndpoint") String originalEndpoint,
+            @RequestHeader(IS_RESPONSE_FILE) Optional<Boolean> isResponseFile,
+            @RequestHeader(MOCK_RESPONSE) Optional<String> mockResponse,
+            @RequestHeader(MOCK_RESPONSE_STATUS) Optional<Integer> mockResponseStatus,
+            @RequestHeader(MOCK_CONFIG_NAME) Optional<String> mockConfigName,
+            @RequestParam Map<String, String> requestParams
+    ) {
+        log.info("PUT params: " + requestParams);
+        String mapperValue = getMapperValueIfApplicable(originalEndpoint, mockConfigName, requestParams);
+        return getMonoResponseEntity(originalEndpoint, mockResponseStatus, mapperValue, mockConfigName, HttpMethod.PUT);
+    }
+
+    @DeleteMapping
+    public ResponseEntity<Mono<String>> mockDeleteRequest(
+            @RequestParam("originalEndpoint") String originalEndpoint,
+            @RequestHeader(IS_RESPONSE_FILE) Optional<Boolean> isResponseFile,
+            @RequestHeader(MOCK_RESPONSE) Optional<String> mockResponse,
+            @RequestHeader(METHOD_CORRECTION_REQUIRED) Optional<String> methodCorrection,
+            @RequestHeader(MOCK_RESPONSE_STATUS) Optional<Integer> mockResponseStatus,
+            @RequestHeader(MOCK_CONFIG_NAME) Optional<String> mockConfigName,
+            @RequestParam Map<String, String> requestParams
+    ) {
+        log.info("DELETE params: " + requestParams);
+        String mapperValue = getMapperValueIfApplicable(originalEndpoint, mockConfigName, requestParams);
+        return getMonoResponseEntity(originalEndpoint, mockResponseStatus, mapperValue, mockConfigName, HttpMethod.DELETE);
     }
 
     @PostMapping
@@ -70,26 +102,29 @@ public class LocalMockController {
     ) {
         log.info("POST params: " + params);
         String mapperValue = getMapperValueIfApplicable(originalEndpoint, mockConfigName, params);
-        return getMonoResponseEntity(originalEndpoint, isResponseFile, mockResponse, mockResponseStatus, mapperValue, mockConfigName);
+        return getMonoResponseEntity(originalEndpoint, mockResponseStatus, mapperValue, mockConfigName, HttpMethod.POST);
     }
 
     private ResponseEntity<Mono<String>> getMonoResponseEntity(
             String originalEndpoint,
-            Optional<Boolean> isResponseFile,
-            Optional<String> mockResponse,
             Optional<Integer> mockResponseStatus,
             String mapperValue,
-            Optional<String> mockConfigName) {
+            Optional<String> mockConfigName, HttpMethod requestMethod) {
         String responseString = "";
+        Tuple2<Boolean, String> responseConfig = getMethodSpecificResponseConfig(mockConfigName, requestMethod);
+        Boolean isResponseFileUpdated = responseConfig.getT1();
+        String mockResponseUpdated = responseConfig.getT2();
         String mockConfigId = mockConfigName.orElse(null);
-        String responseKey = mockResponse.orElse(null);
+        String responseKey = mockResponseUpdated;
+
         String isResponseFileKey = !StringUtils.isEmpty(mapperValue)
                 ? mockConfigId + "_" + mapperValue + "_responseFile"
                 : null;
+
         Boolean isResponseFileCalculated = isResponseFileKey != null
                 && !StringUtils.isEmpty(mockResponseConfig.getResponse().get(isResponseFileKey))
                 ? Boolean.valueOf(mockResponseConfig.getResponse().get(isResponseFileKey))
-                : isResponseFile.orElse(Boolean.FALSE);
+                : isResponseFileUpdated;
 
         Duration delay = getDelay(mockConfigId);
 
@@ -126,7 +161,7 @@ public class LocalMockController {
             } catch (Exception e) {
                 log.error("Unable to read response resource."
                         + " Endpoint: " + originalEndpoint
-                        + ", mockResponse: " + mockResponse, e);
+                        + ", mockResponse: " + mockResponseUpdated, e);
             }
         }
 
@@ -145,6 +180,29 @@ public class LocalMockController {
         return ResponseEntity.status(status)
                 .headers(responseHeaders)
                 .body(Mono.just(responseString).delayElement(delay));
+    }
+
+    private Tuple2<Boolean, String> getMethodSpecificResponseConfig(Optional<String> mockConfigName, HttpMethod requestMethod) {
+        String askedRequestMethod = requestMethod.toString();
+        Optional<GatewayMockConfigProperties.Api> serviceConfig = getServiceConfig(mockConfigName);
+        GatewayMockConfigProperties.Api api = serviceConfig.orElse(null);
+        assert api != null;
+        if (HttpMethod.DELETE.name().equalsIgnoreCase(askedRequestMethod)
+                && api.getMockResponseByMethod().getDelete() != null)
+        {
+            String[] arr = api.getMockResponseByMethod().getDelete();
+            return Tuples.of(Boolean.parseBoolean(arr[0]), arr[1]);
+        } else if (HttpMethod.PUT.name().equalsIgnoreCase(askedRequestMethod)
+                && api.getMockResponseByMethod().getDelete() != null) {
+            String[] arr = api.getMockResponseByMethod().getPut();
+            return Tuples.of(Boolean.parseBoolean(arr[0]), arr[1]);
+        } else if (HttpMethod.POST.name().equalsIgnoreCase(askedRequestMethod)
+                && api.getMockResponseByMethod().getDelete() != null) {
+            String[] arr = api.getMockResponseByMethod().getPost();
+            return Tuples.of(Boolean.parseBoolean(arr[0]), arr[1]);
+        }
+
+        return Tuples.of(api.isResponseFile(), api.getMockResponse());
     }
 
     private String getResponseStringFromKey(String mapperValue, String mockConfigId, String responseKey) {

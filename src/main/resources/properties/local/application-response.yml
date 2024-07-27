@@ -1,0 +1,3 @@
+mock:
+  response:
+    sampleConfigResponseKey: '{ "statusCode": 401, "statusMessage": "new file" }'
