@@ -9,12 +9,9 @@ spring:
       globalcors:
         cors-configurations:
           '[/**]':
-            allowedOrigins: "http://localhost:8081"
-            allowedMethods:
-              - GET
-              - PUT
-              - POST
-              - DELETE
+            allowedOrigins: "*"
+            allowedMethods: "*"
+            allowedHeaders: "*"
       httpclient:
         connect-timeout: 5000000
         response-timeout: 50000s
@@ -76,7 +73,19 @@ management:
 
 mock:
   response:
-    sampleConfigResponseKey: '{ "statusCode": 701, "statusMessage": "another sample response" }'
+    sampleConfigResponseKey: '{ "statusCode": 701, "statusMessage": "vikash: another sample response" }'
+    sampleLoginResponseKey: '{ "@statusCode": 200, "statusMessage": "generic response", "username": "sample@tree.com" }'
+    '[sampleLoginResponseKey_Vikash@tree.com_mockResponse]': '{ "statusCode": 200, "statusMessage": "Vikash is allowed", "username": "Vikash@tree.com" }'
+    mockLoginApi_Vikash@tree.com_httpStatus: 200
+    '[sampleLoginResponseKey_Ramu@tree.com_mockResponse]': '{ "statusCode": 401, "statusMessage": "Ramu is not allowed" }'
+    '[mockLoginApi_Ramu@tree.com_httpStatus]': 401
+    sampleOtpResponseKey: '{ "statusCode": 200, "statusMessage": "generic response" }'
+    mockOtpApi_0123456789_httpStatus: 200
+    mockOtpApi_1234567890_httpStatus: 401
+    sampleOtpValidateResponseKey: '{ "statusCode": 200, "statusMessage": "generic response", "username": "oSample@tree.com" }'
+    sampleOtpValidateResponseKey_123456_mockResponse: '{ "statusCode": 200, "statusMessage": "generic response", "username": "123456@tree.com" }'
+    mockOtpValidateApi_123456_httpStatus: 200
+    mockOtpValidateApi_000000_httpStatus: 401
 
 
 mockgateway:
@@ -122,4 +131,48 @@ mockgateway:
         - true
         - /mock/tree/post.json
     mockResponseStatus: 200
+    order: 0
+  apis[3]:
+    mockEnabled: true
+    mockName: mockLoginApi
+    endpointCheck: /tree/auth/login
+    responseFile: false
+    mockResponse: sampleLoginResponseKey
+    mockResponseStatus: 200
+    mockResponseMapper:
+      type: body
+      mapperKey: userName
+    order: 0
+  apis[4]:
+    mockEnabled: true
+    mockName: mockOtpApi
+    endpointCheck: /tree/auth/otp
+    responseFile: false
+    mockResponse: sampleOtpResponseKey
+    mockResponseStatus: 200
+    mockResponseMapper:
+      type: param
+      mapperKey: phoneNumber
+    order: 0
+  apis[5]:
+    mockEnabled: true
+    mockName: mockOtpValidateApi
+    endpointCheck: /tree/auth/otp/validate
+    responseFile: false
+    mockResponse: sampleOtpValidateResponseKey
+    mockResponseStatus: 200
+    mockResponseMapper:
+      type: param
+      mapperKey: otpNumber
+    order: 0
+  apis[6]:
+    mockEnabled: true
+    mockName: mockOtpValidateApi
+    endpointCheck: /tree/auth/logout
+    responseFile: false
+    mockResponse: sampleOtpValidateResponseKey
+    mockResponseStatus: 200
+    mockResponseMapper:
+      type: param
+      mapperKey: otpNumber
     order: 0

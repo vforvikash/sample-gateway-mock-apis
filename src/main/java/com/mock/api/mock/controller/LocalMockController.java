@@ -187,17 +187,21 @@ public class LocalMockController {
         Optional<GatewayMockConfigProperties.Api> serviceConfig = getServiceConfig(mockConfigName);
         GatewayMockConfigProperties.Api api = serviceConfig.orElse(null);
         assert api != null;
+
         if (HttpMethod.DELETE.name().equalsIgnoreCase(askedRequestMethod)
-                && api.getMockResponseByMethod().getDelete() != null)
+                && null != api.getMockResponseByMethod()
+                && null != api.getMockResponseByMethod().getDelete())
         {
             String[] arr = api.getMockResponseByMethod().getDelete();
             return Tuples.of(Boolean.parseBoolean(arr[0]), arr[1]);
         } else if (HttpMethod.PUT.name().equalsIgnoreCase(askedRequestMethod)
-                && api.getMockResponseByMethod().getDelete() != null) {
+                && null != api.getMockResponseByMethod()
+                && null != api.getMockResponseByMethod().getPut()) {
             String[] arr = api.getMockResponseByMethod().getPut();
             return Tuples.of(Boolean.parseBoolean(arr[0]), arr[1]);
         } else if (HttpMethod.POST.name().equalsIgnoreCase(askedRequestMethod)
-                && api.getMockResponseByMethod().getDelete() != null) {
+                && null != api.getMockResponseByMethod()
+                && null != api.getMockResponseByMethod().getPost()) {
             String[] arr = api.getMockResponseByMethod().getPost();
             return Tuples.of(Boolean.parseBoolean(arr[0]), arr[1]);
         }
@@ -208,7 +212,7 @@ public class LocalMockController {
     private String getResponseStringFromKey(String mapperValue, String mockConfigId, String responseKey) {
         String responseString;
         String mapperResponseKey = !StringUtils.isEmpty(mapperValue)
-                ? mockConfigId + "_" + mapperValue + "_mockResponse"
+                ? responseKey + "_" + mapperValue + "_mockResponse"
                 : responseKey;
         responseString = !StringUtils.isEmpty(mockResponseConfig.getResponse().get(mapperResponseKey))
                 ? mockResponseConfig.getResponse().get(mapperResponseKey)
